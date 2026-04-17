@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import pandas as pd
 
@@ -94,5 +93,5 @@ def main_cobrancas_comp_inchurch_hist(year: int, month: int):
 
     except Exception as e:
         logger.error(f"💥 Erro fatal: {e}")
-        sys.exit(1)
+        raise
 

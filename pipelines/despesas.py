@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import pandas as pd
 
@@ -60,4 +59,4 @@ def main_despesas(year: int):
 
     except Exception as e:
         logger.error(f"💥 Erro fatal: {e}")
-        sys.exit(1)
+        raise

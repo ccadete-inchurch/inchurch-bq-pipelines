@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import pandas as pd
 
@@ -60,7 +59,14 @@ def main_cobrancas_comp_inchurch(year: int, month: int):
             dt_inicio = f"{month:02d}/01/{year}"
             start = pd.to_datetime(dt_inicio) + pd.DateOffset(months=1)
             ultimo_dia = (start + pd.offsets.MonthEnd(0)).day
-            dt_fim = f"{month + 1:02d}/{ultimo_dia:02d}/{year}"
+
+            mes_fim = month + 1
+            ano_fim = year
+            if mes_fim > 12:
+                mes_fim = 1
+                ano_fim = year + 1
+
+            dt_fim = f"{mes_fim:02d}/{ultimo_dia:02d}/{ano_fim}"
 
             sucesso = pipeline.executar(
                 max_paginas=200,
@@ -94,5 +100,5 @@ def main_cobrancas_comp_inchurch(year: int, month: int):
 
     except Exception as e:
         logger.error(f"💥 Erro fatal: {e}")
-        sys.exit(1)
+        raise
 

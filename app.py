@@ -2,7 +2,14 @@ import signal
 from flask import Flask
 
 from route_registry import PIPELINE_ROUTES
+from config import Config
 from utils.threadpool_manager import get_thread_pool, shutdown_thread_pool
+
+# Validar configurações na startup
+try:
+    Config.validate()
+except ValueError as e:
+    raise RuntimeError(f"Erro de configuração: {e}")
 
 app = Flask(__name__)
 

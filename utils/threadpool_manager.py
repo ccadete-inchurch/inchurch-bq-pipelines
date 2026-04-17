@@ -4,7 +4,8 @@ Prevents unlimited thread spawning which can exhaust system resources.
 """
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Tuple
 
 from config import Config
@@ -65,13 +66,16 @@ class PipelineThreadPool:
 
 # Global thread pool instance
 _pipeline_thread_pool = None
+_pool_lock = threading.Lock()
 
 
 def get_thread_pool() -> PipelineThreadPool:
-    """Get or create the global thread pool instance."""
+    """Get or create the global thread pool instance (thread-safe)."""
     global _pipeline_thread_pool
     if _pipeline_thread_pool is None:
-        _pipeline_thread_pool = PipelineThreadPool()
+        with _pool_lock:
+            if _pipeline_thread_pool is None:
+                _pipeline_thread_pool = PipelineThreadPool()
     return _pipeline_thread_pool
 
 

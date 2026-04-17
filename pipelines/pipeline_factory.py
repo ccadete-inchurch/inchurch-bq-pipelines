@@ -4,7 +4,6 @@ Eliminates duplicate try-except blocks across all pipeline modules.
 """
 
 import logging
-import sys
 
 from config import Config
 
@@ -45,6 +44,6 @@ def create_main_pipeline(pipeline_class, class_name: str, max_paginas: int = Non
 
         except Exception as e:
             logger.error(f"💥 Erro fatal em pipeline de {class_name}: {e}")
-            sys.exit(1)
+            raise
 
     return main

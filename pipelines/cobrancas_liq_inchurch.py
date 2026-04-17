@@ -1,5 +1,4 @@
 import logging
-import sys
 from datetime import datetime
 
 import pandas as pd
@@ -114,4 +113,4 @@ def main_cobrancas_liq_inchurch(year: int, month: int):
 
     except Exception as e:
         logger.error(f"💥 Erro fatal: {e}")
-        sys.exit(1)
+        raise

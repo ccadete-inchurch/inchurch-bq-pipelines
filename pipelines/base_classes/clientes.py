@@ -38,15 +38,14 @@ class ClientesPipeline(BasePipeline):
             df = df[mask_nome]
 
         if 'st_email_sac' in df.columns:
-            df = df.assign(
-                st_email_sac_1=df['st_email_sac'].str.split(';').str[0],
-                st_email_sac_2=df['st_email_sac'].str.split(';').str[1]
-            )
-            df = df.assign(
-                st_email_sac_1_1=df['st_email_sac_1'].str.split(',').str[0],
-                st_email_sac_1_2=df['st_email_sac_1'].str.split(',').str[1]
-            )
-            df = df.drop(columns=['st_email_sac', 'st_email_sac_1'])
+            split_pv = df['st_email_sac'].str.split(';', n=1, expand=True)
+            split_vg = split_pv[0].str.split(',', n=1, expand=True)
+
+            df['st_email_sac_2']   = split_pv[1] if 1 in split_pv.columns else None
+            df['st_email_sac_1_1'] = split_vg[0]
+            df['st_email_sac_1_2'] = split_vg[1] if 1 in split_vg.columns else None
+
+            df = df.drop(columns=['st_email_sac'])
             df = df.rename(columns={'st_email_sac_1_1': 'st_email_sac.1.1'})
             df = df.rename(columns={'st_email_sac_1_2': 'st_email_sac.1.2'})
             df = df.rename(columns={'st_email_sac_2': 'st_email_sac.2'})

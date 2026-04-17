@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import pandas as pd
 
@@ -69,4 +68,4 @@ def main_cobrancas_comp_a6_hist():
 
     except Exception as e:
         logger.error(f"💥 Erro fatal: {e}")
-        sys.exit(1)
+        raise

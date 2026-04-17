@@ -1,5 +1,4 @@
 import logging
-import sys
 from datetime import datetime
 
 import pandas as pd
@@ -73,4 +72,4 @@ def tabela_mrr(year: int):
 
     except Exception as e:
         logger.error(f"💥 Erro fatal em pipeline de MRR: {e}")
-        sys.exit(1)
+        raise

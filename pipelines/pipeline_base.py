@@ -14,7 +14,13 @@ logger = logging.getLogger(__name__)
 
 class BasePipeline:
     def __init__(self, db_connection_string: str, access_token: str):
-        self.db_engine = create_engine(db_connection_string)
+        self.db_engine = create_engine(
+            db_connection_string,
+            pool_size=5,
+            max_overflow=10,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+        )
         self.url_base = Config.SUPERLOGICA_API_URL
         self.headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -31,6 +37,7 @@ class BasePipeline:
                 params['pagina'] = pagina
 
                 max_tentativas = Config.API_MAX_RETRIES
+                dados_pagina = None
                 for tentativa in range(max_tentativas):
                     try:
                         response = requests.get(
@@ -50,11 +57,11 @@ class BasePipeline:
                     except requests.exceptions.RequestException as e:
                         logger.warning(f"Falha na tentativa {tentativa + 1}/{max_tentativas} para a página {pagina}: {e}")
                         if tentativa < max_tentativas - 1:
-                            time.sleep(2)
-
-                else:
-                    logger.error(f"Todas as {max_tentativas} tentativas falharam para a página {pagina}. Pulando para a próxima.")
-                    continue
+                            import random
+                            wait_time = min(2 ** tentativa + random.uniform(0, 1), 32)
+                            time.sleep(wait_time)
+                        else:
+                            logger.error(f"Todas as {max_tentativas} tentativas falharam para a página {pagina}. Pulando para a próxima.")
 
                 if not dados_pagina or not isinstance(dados_pagina, list):
                     break
@@ -123,11 +130,10 @@ class BasePipeline:
                                 logger.info(f"Adicionando chave primária '{chave_unica}' à nova tabela '{tabela}'.")
                                 conn.execute(text(f'ALTER TABLE "{tabela}" ADD PRIMARY KEY ("{chave_unica}");'))
 
-                            df_para_inserir = df.copy()
-                            df_para_inserir.to_sql(name=tabela, con=conn, if_exists='append', index=False, chunksize=Config.DB_BATCH_SIZE)
+                            df.to_sql(name=tabela, con=conn, if_exists='append', index=False, chunksize=Config.DB_BATCH_SIZE)
                             trans.commit()
 
-                            mensagem_sucesso = f"✅ {script_rodado}. {len(df_para_inserir)} registros inseridos."
+                            mensagem_sucesso = f"✅ {script_rodado}. {len(df)} registros inseridos."
                             logger.info(mensagem_sucesso)
 
                             if not silenciar_validacao:
@@ -167,6 +173,8 @@ class BasePipeline:
                         try:
                             with conn.begin() as trans:
                                 df.to_sql(name=temp_table, con=conn, if_exists='replace', index=False)
+                                chave_unica_safe = chave_unica.replace('.', '_').replace('-', '_')
+                                conn.execute(text(f'CREATE INDEX IF NOT EXISTS "idx_{chave_unica_safe}" ON "{temp_table}" ("{chave_unica}");'))
                                 logger.info(f"{len(df)} registros inseridos na tabela temporária")
 
                                 cols_list = df.columns

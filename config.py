@@ -39,9 +39,30 @@ class Config:
     def get_token(cls, system: str) -> str:
         """Get API token for a specific system (inchurch or a6)"""
         if system.lower() == "inchurch":
-            return cls.INCHURCH_TOKEN
+            token = cls.INCHURCH_TOKEN
         elif system.lower() == "a6":
-            return cls.A6_TOKEN
+            token = cls.A6_TOKEN
         else:
             raise ValueError(f"Unknown system: {system}")
+
+        if not token or token == "":
+            raise ValueError(f"Token for system '{system}' is empty. Check environment variables.")
+
+        return token
+
+    @classmethod
+    def validate(cls) -> bool:
+        """Valida configurações críticas na startup"""
+        required = [
+            ("INCHURCH_TOKEN", cls.INCHURCH_TOKEN),
+            ("A6_TOKEN", cls.A6_TOKEN),
+            ("DB_CONNECTION_STRING", cls.DB_CONNECTION_STRING),
+            ("SUPERLOGICA_APP_TOKEN", cls.SUPERLOGICA_APP_TOKEN),
+        ]
+
+        for name, value in required:
+            if not value or value == "":
+                raise ValueError(f"Environment variable {name} is empty or not set. Configure before starting.")
+
+        return True
 
