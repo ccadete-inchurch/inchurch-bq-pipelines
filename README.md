@@ -1,4 +1,10 @@
-# Inchurch Pipeline
+# Inchurch Data Pipeline
+
+[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.1.2-green?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-blue?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Google Cloud](https://img.shields.io/badge/Google%20Cloud-blue?logo=google-cloud&logoColor=white)](https://cloud.google.com/)
+[![Pandas](https://img.shields.io/badge/Pandas-2.3.2-blue?logo=pandas&logoColor=white)](https://pandas.pydata.org/)
 
 API de pipelines ETL que extrai dados da API do Superlogica e carrega no PostgreSQL. Desenvolvida em Flask e hospedada no Google App Engine, expõe endpoints HTTP que disparam pipelines de forma assíncrona via ThreadPoolExecutor.
 
@@ -13,11 +19,8 @@ API de pipelines ETL que extrai dados da API do Superlogica e carrega no Postgre
 | Gunicorn | 23.0.0 | WSGI server (App Engine) |
 | Pandas | 2.3.2 | Transformação de dados |
 | SQLAlchemy | 2.0.43 | ORM / conexão PostgreSQL |
-| pg8000 | — | Driver PostgreSQL puro Python |
-| Cloud SQL Python Connector | — | Conexão segura via Unix socket |
 | Google App Engine | Standard F1 | Hospedagem da API |
 | Google Cloud SQL | PostgreSQL | Banco de dados destino |
-| N8N | — | Orquestração e monitoramento dos pipelines |
 
 ---
 
@@ -64,10 +67,16 @@ Superlogica  PostgreSQL
 ├── .env.example                        # Template de variáveis de ambiente
 ├── pipelines/
 │   ├── pipeline_base.py               # BasePipeline: extração, carga, validação
-│   ├── base_classes.py                # Classes base por entidade (processamento)
+│   ├── base_classes/                  # Classes base por entidade (processamento)
+│   │   ├── clientes.py
+│   │   ├── cobrancas.py
+│   │   ├── despesas.py
+│   │   ├── produto.py
+│   │   ├── acordos.py
+│   │   ├── grupo.py
+│   │   └── mrr.py
 │   ├── pipeline_factory.py            # Factory para main functions simples
 │   ├── acordos.py
-│   ├── base_mrr.py
 │   ├── clientes_A6.py
 │   ├── clientes_inchurch.py
 │   ├── cobrancas_comp_A6.py
@@ -79,7 +88,8 @@ Superlogica  PostgreSQL
 │   ├── despesas.py
 │   ├── grupo.py
 │   ├── produto.py
-│   └── produtos_mrr.py
+│   ├── produtos_mrr.py
+│   └── mrr.py
 └── utils/
     └── threadpool_manager.py          # Gerenciamento do ThreadPoolExecutor
 ```
