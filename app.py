@@ -1,9 +1,17 @@
+import signal
 from flask import Flask
 
 from route_registry import PIPELINE_ROUTES
-from utils.threadpool_manager import get_thread_pool
+from utils.threadpool_manager import get_thread_pool, shutdown_thread_pool
 
 app = Flask(__name__)
+
+
+def _handle_sigterm(*args):
+    shutdown_thread_pool()
+
+
+signal.signal(signal.SIGTERM, _handle_sigterm)
 
 
 def create_pipeline_route(route_config):

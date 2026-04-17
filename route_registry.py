@@ -4,7 +4,7 @@ Each route entry contains: path, target function, and description.
 """
 
 from pipelines.acordos import main_acordos
-from pipelines.base_mrr import tabela_mrr
+from pipelines.mrr import tabela_mrr
 from pipelines.clientes_A6 import main_clientes_a6
 from pipelines.clientes_inchurch import main_clientes_inchurch
 from pipelines.cobrancas_comp_A6 import main_cobrancas_comp_a6

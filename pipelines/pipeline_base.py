@@ -166,12 +166,8 @@ class BasePipeline:
                     with self.db_engine.connect() as conn:
                         try:
                             with conn.begin() as trans:
-                                chunk_size = 1000
-                                for i, start in enumerate(range(0, len(df), chunk_size)):
-                                    df_chunk = df.iloc[start:start + chunk_size]
-                                    if_exists_mode = 'replace' if i == 0 else 'append'
-                                    df_chunk.to_sql(name=temp_table, con=conn, if_exists=if_exists_mode, index=False)
-                                    logger.info(f"Chunk {i+1} inserido na tabela temporária ({len(df_chunk)} registros)")
+                                df.to_sql(name=temp_table, con=conn, if_exists='replace', index=False)
+                                logger.info(f"{len(df)} registros inseridos na tabela temporária")
 
                                 cols_list = df.columns
                                 cols_sql_insert = ", ".join([f'"{col}"' for col in cols_list])

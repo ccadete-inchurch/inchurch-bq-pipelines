@@ -45,7 +45,8 @@ class ClientesPipelineA6(ClientesPipeline):
                 for col in colunas_existentes:
                     df[col] = pd.to_datetime(df[col], errors='coerce')
             elif tipo == 'float64':
-                df[colunas_existentes] = df[colunas_existentes].astype('float64')
+                for col in colunas_existentes:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').astype('float64')
             elif tipo == 'Int64':
                 for col in colunas_existentes:
                     df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
