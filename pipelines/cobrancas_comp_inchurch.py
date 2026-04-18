@@ -72,7 +72,7 @@ def main_cobrancas_comp_inchurch(year: int, month: int):
                 max_paginas=200,
                 dt_inicio=dt_inicio,
                 dt_fim=dt_fim,
-                modo='append',
+                modo='replace' if month == 1 else 'append',
                 script_rodado=f"Pipeline de cobranças por competência Inchurch, {dt_inicio} a {dt_fim}"
             )
             status = "✅ Sucesso" if sucesso else "❌ Falha"
