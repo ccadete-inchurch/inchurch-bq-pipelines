@@ -170,49 +170,61 @@ class BasePipeline:
             elif modo == 'append':
                 if chave_unica:
                     temp_table = f"temp_{tabela.replace('-', '_')}"
-                    with self.db_engine.connect() as conn:
-                        try:
-                            with conn.begin() as trans:
-                                # chunksize: sem ele, o pandas monta os ~21 mil registros
-                                # num INSERT unico -> pico de memoria estourava o limite
-                                # da instancia (F1, 384 MiB) e derrubava o app no meio da
-                                # gravacao (24/09/2026). Os outros modos ja usavam lotes.
-                                df.to_sql(name=temp_table, con=conn, if_exists='replace',
-                                          index=False, chunksize=Config.DB_BATCH_SIZE)
-                                chave_unica_safe = chave_unica.replace('.', '_').replace('-', '_')
-                                conn.execute(text(f'CREATE INDEX IF NOT EXISTS "idx_{chave_unica_safe}" ON "{temp_table}" ("{chave_unica}");'))
-                                logger.info(f"{len(df)} registros inseridos na tabela temporária")
-
-                                cols_list = df.columns
-                                cols_sql_insert = ", ".join([f'"{col}"' for col in cols_list])
-                                cols_sql_select = ", ".join([f'"{col}"' for col in cols_list])
-                                update_cols_list = [col for col in cols_list if col != chave_unica]
-                                update_cols_sql = ", ".join([f'"{col}" = EXCLUDED."{col}"' for col in update_cols_list])
-                                upsert_sql = text(f"""
-                                    INSERT INTO "{tabela}" ({cols_sql_insert})
-                                    SELECT {cols_sql_select} FROM "{temp_table}"
-                                    ON CONFLICT ("{chave_unica}") DO UPDATE SET {update_cols_sql};
-                                """)
-                                conn.execute(upsert_sql)
-                                conn.execute(text(f'DROP TABLE IF EXISTS "{temp_table}";'))
-
-                            mensagem_sucesso = f"✅ {script_rodado}. Upsert de {len(df)} registros concluído com sucesso."
-                            logger.info(mensagem_sucesso)
-
-                            if not silenciar_validacao:
-                                self._registrar_validacao(script_rodado, mensagem_sucesso, True)
-
-                        except Exception as e:
-                            logger.error(f"❌ Erro durante o upsert: {e}")
-
-                            if not silenciar_validacao:
-                                self._registrar_validacao(script_rodado, str(e), False)
+                    # 2 tentativas: queda de conexao no meio da gravacao
+                    # (network error / broken pipe em 24/09/2026) derrubava a
+                    # carga inteira, e o periodo so era refeito quase 1h depois
+                    # pela verificacao do n8n. Os dados ja estao na memoria,
+                    # entao repetir custa segundos e nao refaz a extracao.
+                    ultima_excecao = None
+                    for tentativa in (1, 2):
+                        with self.db_engine.connect() as conn:
                             try:
-                                conn.execute(text(f'DROP TABLE IF EXISTS "{temp_table}";'))
-                                conn.commit()
-                            except Exception as cleanup_error:
-                                logger.warning(f"⚠️ Erro ao limpar tabela temporária {temp_table}: {cleanup_error}")
-                            raise
+                                with conn.begin() as trans:
+                                    # chunksize: sem ele, o pandas monta os ~21 mil registros
+                                    # num INSERT unico -> pico de memoria estourava o limite
+                                    # da instancia (F1, 384 MiB) e derrubava o app no meio da
+                                    # gravacao (24/09/2026). Os outros modos ja usavam lotes.
+                                    df.to_sql(name=temp_table, con=conn, if_exists='replace',
+                                              index=False, chunksize=Config.DB_BATCH_SIZE)
+                                    chave_unica_safe = chave_unica.replace('.', '_').replace('-', '_')
+                                    conn.execute(text(f'CREATE INDEX IF NOT EXISTS "idx_{chave_unica_safe}" ON "{temp_table}" ("{chave_unica}");'))
+                                    logger.info(f"{len(df)} registros inseridos na tabela temporária")
+
+                                    cols_list = df.columns
+                                    cols_sql_insert = ", ".join([f'"{col}"' for col in cols_list])
+                                    cols_sql_select = ", ".join([f'"{col}"' for col in cols_list])
+                                    update_cols_list = [col for col in cols_list if col != chave_unica]
+                                    update_cols_sql = ", ".join([f'"{col}" = EXCLUDED."{col}"' for col in update_cols_list])
+                                    upsert_sql = text(f"""
+                                        INSERT INTO "{tabela}" ({cols_sql_insert})
+                                        SELECT {cols_sql_select} FROM "{temp_table}"
+                                        ON CONFLICT ("{chave_unica}") DO UPDATE SET {update_cols_sql};
+                                    """)
+                                    conn.execute(upsert_sql)
+                                    conn.execute(text(f'DROP TABLE IF EXISTS "{temp_table}";'))
+
+                                mensagem_sucesso = f"✅ {script_rodado}. Upsert de {len(df)} registros concluído com sucesso."
+                                logger.info(mensagem_sucesso)
+
+                                if not silenciar_validacao:
+                                    self._registrar_validacao(script_rodado, mensagem_sucesso, True)
+                                ultima_excecao = None
+                                break
+
+                            except Exception as e:
+                                ultima_excecao = e
+                                logger.error(f"❌ Erro durante o upsert (tentativa {tentativa}/2): {e}")
+                                try:
+                                    conn.execute(text(f'DROP TABLE IF EXISTS "{temp_table}";'))
+                                    conn.commit()
+                                except Exception as cleanup_error:
+                                    logger.warning(f"⚠️ Erro ao limpar tabela temporária {temp_table}: {cleanup_error}")
+
+                    if ultima_excecao is not None:
+                        # As 2 tentativas falharam: registra e propaga, como antes.
+                        if not silenciar_validacao:
+                            self._registrar_validacao(script_rodado, str(ultima_excecao), False)
+                        raise ultima_excecao
 
                     return True
 
