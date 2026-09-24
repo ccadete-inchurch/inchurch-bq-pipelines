@@ -100,7 +100,8 @@ class BasePipeline:
                     conn.execute(text("""
                         INSERT INTO public.splgc_validacoes (script, mensagem, sucesso, dt_update)
                         VALUES (:script, :mensagem, :sucesso, CURRENT_DATE)
-                    """), {"script": script_rodado, "mensagem": mensagem, "sucesso": sucesso})
+                    """), {"script": script_rodado, "mensagem": (mensagem or "")[:600],
+                           "sucesso": sucesso})
             logger.info(f"✅ Validação registrada: {script_rodado}")
         except Exception as e:
             logger.error(f"❌ Erro ao registrar validação: {e}")
@@ -172,7 +173,12 @@ class BasePipeline:
                     with self.db_engine.connect() as conn:
                         try:
                             with conn.begin() as trans:
-                                df.to_sql(name=temp_table, con=conn, if_exists='replace', index=False)
+                                # chunksize: sem ele, o pandas monta os ~21 mil registros
+                                # num INSERT unico -> pico de memoria estourava o limite
+                                # da instancia (F1, 384 MiB) e derrubava o app no meio da
+                                # gravacao (24/09/2026). Os outros modos ja usavam lotes.
+                                df.to_sql(name=temp_table, con=conn, if_exists='replace',
+                                          index=False, chunksize=Config.DB_BATCH_SIZE)
                                 chave_unica_safe = chave_unica.replace('.', '_').replace('-', '_')
                                 conn.execute(text(f'CREATE INDEX IF NOT EXISTS "idx_{chave_unica_safe}" ON "{temp_table}" ("{chave_unica}");'))
                                 logger.info(f"{len(df)} registros inseridos na tabela temporária")
